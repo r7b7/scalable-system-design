@@ -12,28 +12,53 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+
+import io.lettuce.core.cluster.ClusterClientOptions;
+import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
 
 @Configuration
 @EnableCaching
 public class RedisConfig {
-    @Value("${redisNodes}")
-    private List<String> clusterNodes;
 
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        RedisClusterConfiguration clusterConfiguration = new RedisClusterConfiguration(clusterNodes);
-        return new LettuceConnectionFactory(clusterConfiguration);
-    }
+        @Value("${spring.redis.cluster.nodes}")
+        private String singleNode;
 
-    @Bean
-    public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
-        RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofHours(1))
-                .disableCachingNullValues();
+        @Bean
+        public RedisConnectionFactory redisConnectionFactory() {
+                RedisClusterConfiguration clusterConfiguration = new RedisClusterConfiguration(List.of(singleNode));
 
-        return RedisCacheManager.builder(redisConnectionFactory)
-                .cacheDefaults(cacheConfiguration)
-                .build();
-    }
+                ClusterTopologyRefreshOptions topologyRefreshOptions = ClusterTopologyRefreshOptions.builder()
+                                .enableAdaptiveRefreshTrigger(
+                                                ClusterTopologyRefreshOptions.RefreshTrigger.MOVED_REDIRECT,
+                                                ClusterTopologyRefreshOptions.RefreshTrigger.PERSISTENT_RECONNECTS)
+                                .enableAllAdaptiveRefreshTriggers()
+                                .adaptiveRefreshTriggersTimeout(Duration.ofSeconds(30))
+                                .build();
+
+                ClusterClientOptions clientOptions = ClusterClientOptions.builder()
+                                .maxRedirects(3) 
+                                .autoReconnect(true)
+                                .validateClusterNodeMembership(false) 
+                                .topologyRefreshOptions(topologyRefreshOptions)
+                                .build();
+
+                LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
+                                .clientOptions(clientOptions)
+                                .commandTimeout(Duration.ofSeconds(5))
+                                .build();
+                return new LettuceConnectionFactory(clusterConfiguration, clientConfig);
+        }
+
+        @Bean
+        public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
+                RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
+                                .entryTtl(Duration.ofHours(1))
+                                .disableCachingNullValues();
+
+                return RedisCacheManager.builder(redisConnectionFactory)
+                                .cacheDefaults(cacheConfiguration)
+                                .build();
+        }
 }

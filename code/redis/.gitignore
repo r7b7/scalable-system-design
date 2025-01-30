@@ -32,4 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 .DS_Store
+code/.DS_Store
+.gitattributes
 

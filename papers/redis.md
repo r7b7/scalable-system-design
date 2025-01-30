@@ -1,5 +1,5 @@
 
-## Can Your Caching Mechanism Auto-Recover?
+## Part -1 : Can Your Caching Mechanism Auto-Recover?
 
 While designing scalable systems for production-grade enterprise applications, we must pick tools and stack that has resiliency built into it. 
 
@@ -131,7 +131,7 @@ When the nodes go down in real-time, Ops team would be notified by the monitorin
 
 Ops team would quickly analyze the situation, see that a node went down and that a new master was picked by redis-cluster but somehow application crashes as it cannot establish a connection with the master that went down.
 
-Without a second though, all the impacted services will be restarted and all is well again.
+Without a second thought, all the impacted services will be restarted and all is well again.
 
 Developers would assume it was “Ops” team that messed up by not setting up the cluster well. Leadership will listen to the same narrative. Chances are Redis will be replaced by a new tool with bigger promises.
 
@@ -139,7 +139,7 @@ What should have been done?
 
 “Dev” and “Ops” should have worked together as “DevOps” and tested failover and recovery together and figured out how to configure application in such a way that it could harness the full capabilities of the underlying system like Redis.
 
-If you followed my previous post (which I hope you did else none of the stuff we are discussing here would make sense), you would remember how connected the Redis Cluster to a SpringBoot Application.
+If you followed Part-1 (which I hope you did else none of the stuff we are discussing here would make sense), you would remember how we connected the Redis Cluster to a SpringBoot Application.
 
 In that setup, if we were to bring a slave node down and switch to our application’s console, we would notice nothing.
 
@@ -162,7 +162,7 @@ Connection refused: /127.0.0.1:7002
 
 **Experiment 1: Enable Adaptive Cluster Refresh**
 
-We can set the adaptive refresh properties in Lettuce Redis Client and instead of providing all six ip adresses of redis nodes just provide one.
+We can set the adaptive refresh properties in Lettuce Redis Client and instead of providing all six ip addresses of Redis nodes just provide one.
 
 Idea is, Lettuce would auto-discover the nodes that are part of the cluster and this way when master node goes down, we would not have to restart the server.
 
@@ -188,7 +188,7 @@ public RedisConnectionFactory redisConnectionFactory() {
 
 What worked: Providing just a single node ip instead of all six was enough to establish the connection with redis cluster.
 
-What didn’t work: When master node goes down, application tries to reestablish the connection until its exhausted and API calls fail.
+What didn’t work: When master node goes down, application tries to re-establish the connection until it's exhausted and API calls fail.
 
 **Experiment 2: Update config to automatically reconnect with cluster topology changes**
 
@@ -234,7 +234,7 @@ We can achieve a few things with these kinds of approach:
 1.  Establish a better work culture between engineering teams
 2.  Bringdown the app downtime close to 0
 3.  Harness the full capacity of a time-tested tool before chasing shiny new objects
-4.  Built a reliable, highly available system in the process
+4.  Build a reliable, highly available system in the process
 
 ## Github 
 

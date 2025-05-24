@@ -1,4 +1,4 @@
-**What is OAuth?**
+## What is OAuth?
 
 OAuth (Open Authorization) is an authorization protocol that allows third-party applications to access a user’s resources without sharing the user's credentials or identity.
 
@@ -26,11 +26,11 @@ Same actor can play multiple roles based on the situation.
 
 | Grant Type                                           | Use Case                                                 |
 | ---------------------------------------------------- | -------------------------------------------------------- |
-| **Authorization Code**                               | Web/mobile apps with user login                          |
-| **Implicit** (deprecated)                            | Was used for browser-based apps (no longer recommended)  |
-| **Client Credentials**                               | Machine-to-machine/server-to-server access               |
-| **Resource Owner Password Credentials** (deprecated) | Username/password directly given to client (discouraged) |
-| **Device Code**                                      | Devices without browsers (TVs, consoles)                 |
+| Authorization Code                               | Web/mobile apps with user login                          |
+| Implicit (deprecated)                            | Was used for browser-based apps (no longer recommended)  |
+| Client Credentials                               | Machine-to-machine/server-to-server access               |
+| Resource Owner Password Credentials (deprecated) | Username/password directly given to client (discouraged) |
+| Device Code                                      | Devices without browsers (TVs, consoles)                 |
 
 -> Two types of tokens are :
 1. Access Token
@@ -41,13 +41,13 @@ Same actor can play multiple roles based on the situation.
 2. /token – where tokens are issued
 3. /revoke – (optional) to revoke tokens
 
-**What is OpenID?**
+## What is OpenID?
 
 We often hear the terms - OAuth and OpenID together and there is a reason for that. Together they provide a complete solution to Authentication/Authorization challenges.
 
 OpenID Connect is a layer on top of OAuth2 that adds authentication — so apps can know who we are. It’s like OAuth2 + ID card.
 
-**Providers that support OIDC + OAuth2**
+## Providers that support OIDC + OAuth2
 
 1. Okta
 2. Keycloak
@@ -58,7 +58,7 @@ OpenID Connect is a layer on top of OAuth2 that adds authentication — so apps 
 7. Auth0
 
 
-**In-house OAuth2/OIDC server**
+## In-house OAuth2/OIDC server
 
 If you decide to build your own OAuth2 server:
 
@@ -76,7 +76,7 @@ Public keys endpoint (for verifying ID tokens)
 
 Spring Boot will use that metadata to handle the rest.
 
---------------------------
+## Sample Use Cases
 To understand the concepts better, we will cover a few use cases and verify the implementation using SpringBoot and Java.
 
 Use Case 1: Service is registered as a Client with google (Auth Server and Resource Server are same - Google)
@@ -149,10 +149,10 @@ In this use case, Google acts as both Authorization Server and Resource Server.
 
 | Role                     | Definition                                                       | In Our Example                         |
 | ------------------------ | ---------------------------------------------------------------- | ------------------------------------------- |
-| **Resource Owner**       | The person who owns the data or identity.                        | The end user (You)logging in via Google.   |
-| **Client**               | The app that wants to access the user’s data or log the user in. | Our Spring Boot application        |
-| **Authorization Server** | Authenticates the user and gives tokens.                         | Google (accounts.google.com)          |
-| **Resource Server**      | Hosts the user's protected data.                                 | Google (for full name, email) |
+| Resource Owner      | The person who owns the data or identity.                        | The end user (You)logging in via Google.   |
+| Client               | The app that wants to access the user’s data or log the user in. | Our Spring Boot application        |
+| Authorization Server | Authenticates the user and gives tokens.                         | Google (accounts.google.com)          |
+| Resource Server      | Hosts the user's protected data.                                 | Google (for full name, email) |
 
 
 **Use Case 2:**
@@ -161,7 +161,6 @@ An interesting fact is - SpringBoot by default creates a login page at "/login".
 
 If in our Controller class, we add a "/login" endpoint, it will be taken over by internal login page unless it's configured in security chain.
 
-----------
 
 In this 2nd use case, we analyze a scenario, where the user would first access a base url and then access a "/home" endpoint. We provide access to base url without authentication but any specific endpoint should be accessed post authentication alone.
 
@@ -189,3 +188,6 @@ This is done by adding relevant endpoints in SecurityFilterChain Bean.
         return handler;
     }
 ```
+
+## Code
+For UseCase 1 and UseCase 2, check code -> https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/security

@@ -313,5 +313,12 @@ Pass it as a Bearer header token to the resource server API
 Delete or tamper the Bearer token and we would find that the call fails with a 401.
 
 We could also inspect the JWT token generated and verify the scope, client details etc.
+
 ## Code
-For Use Case 1 and Use Case 2, check code -> https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/security
+
+Use Case 1 and Use Case 2,
+https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/security
+
+Use Case 3,
+1. Client Code : https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/client
+2. Server Code : https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/server

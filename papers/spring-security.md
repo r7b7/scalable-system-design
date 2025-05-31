@@ -47,6 +47,11 @@ We often hear the terms - OAuth and OpenID together and there is a reason for th
 
 OpenID Connect is a layer on top of OAuth2 that adds authentication — so apps can know who we are. It’s like OAuth2 + ID card.
 
+## Role of OpenID and OAuth2 in Securing Apps
+
+
+TBA (Apigee doesn't act as a OIDC provifer it supports providers like KeyCloak, Auth0 etc.)
+
 ## Providers that support OIDC + OAuth2
 
 1. Okta
@@ -81,9 +86,9 @@ To understand the concepts better, we will cover a few use cases and verify the 
 
 Use Case 1: Service is registered as a Client with google (Auth Server and Resource Server are same - Google)
 Use Case 2: Enhance Use Case 1 to add a default route post verification
-Use Case 3: client credentials - Service A accesses Service B securily using Auth0 / KeyCloak(Client and Resource Owner are Same)
-Use Case 4: client credentials - Service A accesses Service B securily using Ping Identity
-Use Case 5: Your own Auth Server - if possible.
+Use Case 3: Service A accesses Service B securily using KeyCloak(Client and Resource Owner are Same)
+Use Case 4: Service A accesses Service B securily, Service B has allows only a specific set of scopes
+Use Case 5: Use TCP Authentication
 
 
 **Use Case 1:**
@@ -189,5 +194,124 @@ This is done by adding relevant endpoints in SecurityFilterChain Bean.
     }
 ```
 
+**Use Case 3**
+In this use case, we will create two SpringBoot services and add an Authentication Layer between their communication. In real world scenarios, these would be best used when a service A has exposed endpoints and it reaches out to internal services that has access to resources like Salesforce or Financial Database etc.
+
+In scenarios like this, service that initiates communication to the second service acts like a "Client" and "Resource Owner".
+
+Based on OAuth terminology, we would need two more actors to complete the picture - Authorization server and Resource Server.
+
+Resource Server would be the secind SpringBoot Application that has access to a confidential resource like Salesforce or DB.
+
+For Authorization Server, out of the many choices available (As listed above at the beginning of this article), we would use KeyCloak in this exercise because it would take us for a ride and help gain concrete understanding of core concepts.
+
+KeyCloak is an OAuth2, OIDC and SAML compliant server.
+
+***What's SAML?***
+
+SAML stands for Security Assertion Markup Language.
+
+It’s an open standard used for Single Sign-On (SSO)—especially in enterprise environments.SAML allows one system (identity provider) to tell another system (service provider) that a user has authenticated.
+
+-------------------
+***Setting Up KeyCloak***
+
+We could either install Keycloak in our machine or run it in Docker. In this tutorial, we will be running it in Docker.
+
+We will follow the instructions given in the official document - https://www.keycloak.org/getting-started/getting-started-docker.
+
+These are some key ideas around realm in KeyCloak, curated with help from ChatGPT, 
+| Concept    | What it means in Keycloak |
+| -------- | ------- |
+| Realm  | A space that isolates users, clients, roles, etc.   |
+| Users | Belong to a realm     |
+| Clients    | Apps that are registered inside a realm   |
+| Tokens    | Issued by the realm |
+
+There are different types of Authentication flows that's supported by KeyCloak and based on our need we need to pick the right one for our application. Not to mention this is a bit overwhelming initially but becomes easier as we spend more time around these concepts.
+
+For instance, if we had to pick a flow where the client first retrieves the authorization code and passes it to resource server then we will pick the grant_type as "authorization_code".
+
+1. Retrieve initial token from keycloak portal
+![Output](images/keycloak1.png)
+
+2. Register the client by making a POST API call. Use the initial token retrieved in Step 1 to set the header.
+```
+  curl --location 'http://localhost:8080/realms/demorealm/clients-registrations/default' \
+--header 'Authorization: Bearer <token>' \
+--header 'Content-Type: application/json' \
+--data '{"clientId":"demo_client"}'
+
+```
+3. Copy secret from the response
+
+4. Update application.yml. Note that, based on the Oauth2 flow we select for our use case, we would need to update the yml file with the right configuration.
+
+Sample data from my experiments is given below(Authorization Code Flow):
+```
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: demo_client
+            client-secret: YOUR_CLIENT_SECRET
+            provider: keycloak
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
+            scope: openid, profile
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8080/realms/demo-realm
+
+```
+-----------------------
+In this Use Case, we would pick "OAuth2 Client Credentials Flow" where a client (SpringBoot app) authenticates on its own behalf.
+
+To enable this flow in KeyCloak, we would need to follow these steps:
+1. Create a realm (demorealm in this example)
+2. Create and register a client for our Client SpringBoot service. (demo_client in our example)
+
+Update Client Settings as shown in the image below,
+![Settings](images/client-setting.png)
+
+3. Optionally, create and register another client for our ResourceServer SpringBoot App. This step is not needed for basic JWT authorization so you may as well skip this step for now.
+4. For SpringSecurity to find the token endpoint and generate tokens for outgoing API calls, we need to add this in yml file of client app.
+```
+provider:
+    keycloak:
+        issuer-uri: http://localhost:8080/realms/demorealm
+```
+Note that, if we provide token-uri instead of issuer-uri, we are overriding the expected discovery mechanism. If not configured correctly, we would likely get a 405 on this endpoint.
+
+SpringBoot app by default tries to fetch metadata from the "issuer-uri" endpoint by appending ".well-known/openid-configuration" to the base URL. Appending this discovery endpoint to token uri will result in an error.
+
+All endpoints can be accessed using the link in settings. Refer image below,
+![Endpoints](images/endpoint.png)
+
+5. In server app, we would just need to provide the issuer-uri
+```
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/demorealm
+```
+
+6. Ideally, we would want to fetch the token and set it to the header of outgoing API calls but for the sake of simplicity, we will return the token from a GET API and manually use that in a postman call made to server API.
+
+Note that, to have free access to client APIs, we bypass the security in config class.
+
+Using Postman or any similar tool, let's fetch the token from Client API
+![Client](images/client.png)
+
+Pass it as a Bearer header token to the resource server API
+![Server](images/resource-server.png)
+
+Delete or tamper the Bearer token and we would find that the call fails with a 401.
+
+We could also inspect the JWT token generated and verify the scope, client details etc.
 ## Code
-For UseCase 1 and UseCase 2, check code -> https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/security
+For Use Case 1 and Use Case 2, check code -> https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/security

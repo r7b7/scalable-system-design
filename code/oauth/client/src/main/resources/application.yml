@@ -1,0 +1,17 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak_client:
+            client-id: demo_client
+            client-secret: <client-secret>
+            provider: keycloak
+            authorization-grant-type: client_credentials
+            scope: openid
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8080/realms/demorealm
+
+server:
+  port: 8081

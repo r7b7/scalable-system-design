@@ -5,6 +5,15 @@ server:
 
 spring:
   security:
+    filter:
+      chain:
+        authorization:
+          rules:
+            - pattern: /api/**
+              access: hasAuthority('SCOPE_read:data')
+            - pattern: /**
+              access: denyAll
+            
     oauth2:
       resourceserver:
         jwt:

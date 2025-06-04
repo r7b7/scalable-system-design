@@ -10,4 +10,9 @@ public class GreetingsResource {
     public String getGreetings(){
         return "Hello";
     }
+
+    @GetMapping("/test/greeting")
+    public String getTestGreetings(){
+        return "Hello test";
+    }
 }

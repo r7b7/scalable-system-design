@@ -87,7 +87,7 @@ To understand the concepts better, we will cover a few use cases and verify the 
 Use Case 1: Service is registered as a Client with google (Auth Server and Resource Server are same - Google)
 Use Case 2: Enhance Use Case 1 to add a default route post verification
 Use Case 3: Service A accesses Service B securily using KeyCloak(Client and Resource Owner are Same)
-Use Case 4: Service A accesses Service B securily, Service B has allows only a specific set of scopes
+Use Case 4: Service A accesses Service B securily, Service B allows only a specific set of scopes
 Use Case 5: Use TCP Authentication
 
 
@@ -314,11 +314,56 @@ Delete or tamper the Bearer token and we would find that the call fails with a 4
 
 We could also inspect the JWT token generated and verify the scope, client details etc.
 
+**Use Case 4**
+
+In the previous use case, we created a client that was assigned a few default scopes by keycloak itself. Token generated for that client was then passed in the header of resource server's API call.
+
+In this use case, we want to only allow API calls with a certain scope to access our resources. This way we can enforce scope level authorization on clients. This way we can also enforce access at a granular level by allowing specific clients to perform authrized actions like read, write etc.
+
+From our previous use case, we would borrow the client and add one additional scope to it. 
+![Scope Screen](images/scope-screen.png)
+
+Now when we hit the client API, fetch the token generated, head to jwt.io to decode the token, we will notice that an additional "read:data" scope is added. (If we perform the same steps in Use Case 3, we would get this as a scope - "scope": "openid profile email")
+
+There are a few changes that we would need to make in the SpringBoot App that acts as a Resource Server to enforce scope (or role if we wish to do that) based on API patterns.
+
+We can add the patterns in SecurityConfig class or for ease we can do the same in yml file as well.
+
+```
+spring:
+  security:
+    filter:
+      chain:
+        authorization:
+          rules:
+            - pattern: /api/**
+              access: hasAuthority('SCOPE_read:data')
+            - pattern: /**
+              access: denyAll
+            
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/demorealm
+```
+We can add as many endpoints as needed and define the scopes and instead of "denyAll", we can add "isAuthenticated()" to allow clients that are not anonymous.
+
+To add more than one authority, we can make use of "hasAnyAuthority(String…​ authorities)" expression instead of the one shown in the example.
+
+Note that, we add "SCOPE_" to denote that anything that follows is the scope we are actualy looking for.
+
+***Testing***
+To test our changes, we can add another endpoint that follows a different pattern and observe that "/test/greeting" fails with an authentication error where as "/api/greeting" gives us a response back.
+
+For more Expression-Based Access Control, check Spring docs - https://docs.spring.io/spring-security/reference/6.0/servlet/authorization/expression-based.html.
+
+
+
 ## Code
 
-Use Case 1 and Use Case 2,
+**Use Case 1** and **Use Case 2**,
 https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/security
 
-Use Case 3,
+**Use Case 3** and **Use case 4**,
 1. Client Code : https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/client
 2. Server Code : https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/server

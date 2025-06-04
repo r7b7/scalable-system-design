@@ -236,12 +236,14 @@ KeyCloak is an OAuth2, OIDC and SAML compliant server.
 > We will follow the instructions given in the official document - https://www.keycloak.org/getting-started/getting-started-docker.
 >
 > These are some key ideas around realm in KeyCloak, curated with help from ChatGPT, 
-| Concept    | What it means in Keycloak |
-| -------- | ------- |
-| Realm  | A space that isolates users, clients, roles, etc.   |
-| Users | Belong to a realm     |
-| Clients    | Apps that are registered inside a realm   |
-| Tokens    | Issued by the realm |
+
+>| Concept    | What it means in Keycloak |
+>| -------- | ------- |
+>| Realm  | A space that isolates users, clients, roles, etc.   |
+>| Users | Belong to a realm     |
+>| Clients    | Apps that are registered inside a realm   |
+>| Tokens    | Issued by the realm |
+
 >
 > There are different types of Authentication flows that's supported by KeyCloak and based on our need we need to pick the right one for our application. Not to mention this is a bit overwhelming initially but becomes easier as we spend more time around these concepts.
 >

@@ -1,3 +1,7 @@
+In this paper, we will explore the many options available to secure Java Based applications. 
+
+We will initially familiarize ourselves with the key terminologies and protocols that are industry-standard in securing critical applications. We would then cement our understanding by implementing a few different use cases.
+
 ## What is OAuth?
 
 OAuth (Open Authorization) is an authorization protocol that allows third-party applications to access a user’s resources without sharing the user's credentials or identity.
@@ -9,7 +13,6 @@ First version introduced was OAuth 1.0 and the latest improved version is OAuth 
 Concept in Simple Terms:
 
 Everytime we try to login to a new site using an existing FB or google account, OAuth works under the hood to make this possible. What that means is - when we try to access a site like StackOverflow and are asked to login using an existing Google account, we click on a button and are redirected to Google account, where we are then asked to click on an allow button - this is the process of authorizing Google to share a limited set of information with StackOverflow.
-
 
 Terminologies:
 
@@ -47,10 +50,11 @@ We often hear the terms - OAuth and OpenID together and there is a reason for th
 
 OpenID Connect is a layer on top of OAuth2 that adds authentication — so apps can know who we are. It’s like OAuth2 + ID card.
 
-## Role of OpenID and OAuth2 in Securing Apps
+## What's SAML?
 
+SAML stands for Security Assertion Markup Language.
 
-TBA (Apigee doesn't act as a OIDC provifer it supports providers like KeyCloak, Auth0 etc.)
+It’s an open standard used for Single Sign-On (SSO)—especially in enterprise environments.SAML allows one system (identity provider) to tell another system (service provider) that a user has authenticated.
 
 ## Providers that support OIDC + OAuth2
 
@@ -64,7 +68,7 @@ TBA (Apigee doesn't act as a OIDC provifer it supports providers like KeyCloak, 
 
 
 ## In-house OAuth2/OIDC server
-
+(Work In Progress)
 If you decide to build your own OAuth2 server:
 
 It must support OpenID Connect (OIDC) if you want identity (not just tokens).
@@ -81,25 +85,33 @@ Public keys endpoint (for verifying ID tokens)
 
 Spring Boot will use that metadata to handle the rest.
 
-## Sample Use Cases
-To understand the concepts better, we will cover a few use cases and verify the implementation using SpringBoot and Java.
+## Use Cases
+We will explore the following use cases one-by-one. You could access the sample code for each case by referring to the "Code" section of this paper.
 
 Use Case 1: Service is registered as a Client with google (Auth Server and Resource Server are same - Google)
+
 Use Case 2: Enhance Use Case 1 to add a default route post verification
+
 Use Case 3: Service A accesses Service B securily using KeyCloak(Client and Resource Owner are Same)
+
 Use Case 4: Service A accesses Service B securily, Service B allows only a specific set of scopes
+
 Use Case 5: Use TCP Authentication
 
 
 **Use Case 1:**
 
+In this use case, Google acts as both the Authorization Server and Resource Server.
+
 Step 1:
+
 To Add Google as Authentication Server and Resource Server, we would need to first create a google cloud project with OAuth2 credentials.
 
 Follow the steps at https://console.cloud.google.com/apis/credentials to create free OAuth2 credentials.
 Add sample data in all the fields, for redirect URL - add the following value - http://localhost:8080/login/oauth2/code/google. This is the default redirect URI template provided by Spring App. Note that the final path "google" in the above URL should match the registration id mentioned in application.yml file.(Refer Step 3)
 
 Step 2:
+
 Create a SpringBoot project from [spring](https://start.spring.io/). Add Spring Web, Spring Security and OAuth2 Client as dependency.
 
 Alternatively, add the following dependencies to SpringBoot web project.
@@ -115,6 +127,7 @@ Alternatively, add the following dependencies to SpringBoot web project.
 ```
 
 Step 3:
+
 Add following properties to application.yml file
 ```
 spring:
@@ -135,6 +148,7 @@ spring:
 ```
 
 Step 4: 
+
 Add a default GET endpoint
 ```
     @GetMapping("/")
@@ -144,12 +158,10 @@ Add a default GET endpoint
 ```
 
 Step 5:
+
 Hit the endpoint - http://localhost:8080
 
 ![Output](images/google-redirect.png)
-
-In this use case, Google acts as both Authorization Server and Resource Server.
-
 
 
 | Role                     | Definition                                                       | In Our Example                         |
@@ -162,14 +174,20 @@ In this use case, Google acts as both Authorization Server and Resource Server.
 
 **Use Case 2:**
 
-An interesting fact is - SpringBoot by default creates a login page at "/login".This is a page that lists available OAuth2 providers (like Google), with a “Login with Google” button.
+--------------------
+*Fun Fact*
+
+SpringBoot by default creates a login page at "/login".This is a page that lists available OAuth2 providers (like Google), with a “Login with Google” button.
 
 If in our Controller class, we add a "/login" endpoint, it will be taken over by internal login page unless it's configured in security chain.
 
+--------------------
 
-In this 2nd use case, we analyze a scenario, where the user would first access a base url and then access a "/home" endpoint. We provide access to base url without authentication but any specific endpoint should be accessed post authentication alone.
+In this 2nd use case, we analyze a scenario where the user would first access a base url and then access a "/home" endpoint. We provide access to base url without authentication but any specific endpoint should be accessed post authentication.
 
 This is done by adding relevant endpoints in SecurityFilterChain Bean.
+
+We also add a functionality to this so that everytime our login succeeds we are navigated to "/home" endpoint and not the base endpoint.
 
 ```
   @Bean
@@ -187,55 +205,52 @@ This is done by adding relevant endpoints in SecurityFilterChain Bean.
 
     @Bean
     public AuthenticationSuccessHandler successHandler() {
-        // always redirect to /home after login
         SimpleUrlAuthenticationSuccessHandler handler = new SimpleUrlAuthenticationSuccessHandler("/home");
         handler.setAlwaysUseDefaultTargetUrl(true);
         return handler;
     }
 ```
 
+Note that, both Use Case 1 and Use Case 2 follow "authentication code" authorization flow.
+
 **Use Case 3**
-In this use case, we will create two SpringBoot services and add an Authentication Layer between their communication. In real world scenarios, these would be best used when a service A has exposed endpoints and it reaches out to internal services that has access to resources like Salesforce or Financial Database etc.
+
+In this use case, we will create two SpringBoot services and add an Authentication Layer between their communication. In real world scenarios, these would be best used when Service A has exposed endpoints and it reaches out to internal services that has access to resources like Salesforce or Financial Database etc.
 
 In scenarios like this, service that initiates communication to the second service acts like a "Client" and "Resource Owner".
 
 Based on OAuth terminology, we would need two more actors to complete the picture - Authorization server and Resource Server.
 
-Resource Server would be the secind SpringBoot Application that has access to a confidential resource like Salesforce or DB.
+Resource Server would be the second SpringBoot Application that has access to a confidential resource like Salesforce or DB.
 
 For Authorization Server, out of the many choices available (As listed above at the beginning of this article), we would use KeyCloak in this exercise because it would take us for a ride and help gain concrete understanding of core concepts.
 
 KeyCloak is an OAuth2, OIDC and SAML compliant server.
 
-***What's SAML?***
-
-SAML stands for Security Assertion Markup Language.
-
-It’s an open standard used for Single Sign-On (SSO)—especially in enterprise environments.SAML allows one system (identity provider) to tell another system (service provider) that a user has authenticated.
-
--------------------
-***Setting Up KeyCloak***
-
-We could either install Keycloak in our machine or run it in Docker. In this tutorial, we will be running it in Docker.
-
-We will follow the instructions given in the official document - https://www.keycloak.org/getting-started/getting-started-docker.
-
-These are some key ideas around realm in KeyCloak, curated with help from ChatGPT, 
+> -------------------
+> -------------------
+> ***Setting Up KeyCloak***
+>
+> We could either install Keycloak in our machine or run it in Docker. In this tutorial, we will be running it in Docker.
+>
+> We will follow the instructions given in the official document - https://www.keycloak.org/getting-started/getting-started-docker.
+>
+> These are some key ideas around realm in KeyCloak, curated with help from ChatGPT, 
 | Concept    | What it means in Keycloak |
 | -------- | ------- |
 | Realm  | A space that isolates users, clients, roles, etc.   |
 | Users | Belong to a realm     |
 | Clients    | Apps that are registered inside a realm   |
 | Tokens    | Issued by the realm |
-
-There are different types of Authentication flows that's supported by KeyCloak and based on our need we need to pick the right one for our application. Not to mention this is a bit overwhelming initially but becomes easier as we spend more time around these concepts.
-
-For instance, if we had to pick a flow where the client first retrieves the authorization code and passes it to resource server then we will pick the grant_type as "authorization_code".
-
-1. Retrieve initial token from keycloak portal
+>
+> There are different types of Authentication flows that's supported by KeyCloak and based on our need we need to pick the right one for our application. Not to mention this is a bit overwhelming initially but becomes easier as we spend more time around these concepts.
+>
+> For instance, if we had to pick a flow where the client first retrieves the authorization code and passes it to resource server then we will pick the grant_type as "authorization_code".
+>
+> 1. Retrieve initial token from keycloak portal
 ![Output](images/keycloak1.png)
-
-2. Register the client by making a POST API call. Use the initial token retrieved in Step 1 to set the header.
+>
+> 2. Register the client by making a POST API call. Use the initial token retrieved in Step 1 to set the header.
 ```
   curl --location 'http://localhost:8080/realms/demorealm/clients-registrations/default' \
 --header 'Authorization: Bearer <token>' \
@@ -243,11 +258,11 @@ For instance, if we had to pick a flow where the client first retrieves the auth
 --data '{"clientId":"demo_client"}'
 
 ```
-3. Copy secret from the response
-
-4. Update application.yml. Note that, based on the Oauth2 flow we select for our use case, we would need to update the yml file with the right configuration.
-
-Sample data from my experiments is given below(Authorization Code Flow):
+> 3. Copy secret from the response
+>
+> 4. Update application.yml. Note that, based on the Oauth2 flow we select for our use case, we would need to update the yml file with the right configuration.
+>
+> Sample data from my experiments is given below(Authorization Code Flow):
 ```
 spring:
   security:
@@ -266,17 +281,21 @@ spring:
             issuer-uri: http://localhost:8080/realms/demo-realm
 
 ```
------------------------
+> -----------------------
+> -----------------------
+
 In this Use Case, we would pick "OAuth2 Client Credentials Flow" where a client (SpringBoot app) authenticates on its own behalf.
 
 To enable this flow in KeyCloak, we would need to follow these steps:
 1. Create a realm (demorealm in this example)
+
 2. Create and register a client for our Client SpringBoot service. (demo_client in our example)
 
 Update Client Settings as shown in the image below,
 ![Settings](images/client-setting.png)
 
 3. Optionally, create and register another client for our ResourceServer SpringBoot App. This step is not needed for basic JWT authorization so you may as well skip this step for now.
+
 4. For SpringSecurity to find the token endpoint and generate tokens for outgoing API calls, we need to add this in yml file of client app.
 ```
 provider:
@@ -285,9 +304,11 @@ provider:
 ```
 Note that, if we provide token-uri instead of issuer-uri, we are overriding the expected discovery mechanism. If not configured correctly, we would likely get a 405 on this endpoint.
 
-SpringBoot app by default tries to fetch metadata from the "issuer-uri" endpoint by appending ".well-known/openid-configuration" to the base URL. Appending this discovery endpoint to token uri will result in an error.
+SpringBoot app by default tries to fetch metadata from the "issuer-uri" endpoint by appending ".well-known/openid-configuration" to the base URL. 
 
-All endpoints can be accessed using the link in settings. Refer image below,
+All endpoints can be accessed using the link in settings section of keycloak. 
+
+Refer image below,
 ![Endpoints](images/endpoint.png)
 
 5. In server app, we would just need to provide the issuer-uri
@@ -300,7 +321,7 @@ spring:
           issuer-uri: http://localhost:8080/realms/demorealm
 ```
 
-6. Ideally, we would want to fetch the token and set it to the header of outgoing API calls but for the sake of simplicity, we will return the token from a GET API and manually use that in a postman call made to server API.
+6. Ideally, we would want to fetch the token and set it to the header of outgoing API calls in the client application's RestClient/WebClient but for the sake of simplicity, we will return the token from a GET API and manually use that in a postman call made to server API.
 
 Note that, to have free access to client APIs, we bypass the security in config class.
 
@@ -318,7 +339,7 @@ We could also inspect the JWT token generated and verify the scope, client detai
 
 In the previous use case, we created a client that was assigned a few default scopes by keycloak itself. Token generated for that client was then passed in the header of resource server's API call.
 
-In this use case, we want to only allow API calls with a certain scope to access our resources. This way we can enforce scope level authorization on clients. This way we can also enforce access at a granular level by allowing specific clients to perform authrized actions like read, write etc.
+In this use case, we want to only allow API calls with a certain scope to access our resources. This way we can enforce scope level authorization on clients. This way we can also enforce access at a granular level by allowing specific clients to perform authorized actions like read, write etc.
 
 From our previous use case, we would borrow the client and add one additional scope to it. 
 ![Scope Screen](images/scope-screen.png)
@@ -353,6 +374,7 @@ To add more than one authority, we can make use of "hasAnyAuthority(String…​
 Note that, we add "SCOPE_" to denote that anything that follows is the scope we are actualy looking for.
 
 ***Testing***
+
 To test our changes, we can add another endpoint that follows a different pattern and observe that "/test/greeting" fails with an authentication error where as "/api/greeting" gives us a response back.
 
 For more Expression-Based Access Control, check Spring docs - https://docs.spring.io/spring-security/reference/6.0/servlet/authorization/expression-based.html.
@@ -361,9 +383,11 @@ For more Expression-Based Access Control, check Spring docs - https://docs.sprin
 
 ## Code
 
-**Use Case 1** and **Use Case 2**,
+**Use Case 1** and **Use Case 2**
+
 https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/security
 
-**Use Case 3** and **Use case 4**,
+**Use Case 3** and **Use Case 4**,
+
 1. Client Code : https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/client
 2. Server Code : https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/server

@@ -16,7 +16,7 @@ Everytime we try to login to a new site using an existing FB or google account, 
 
 Terminologies:
 
--> A few fundamental concepts in OAuth are discussed in this section - this would help us in mapping different actors involved in the authorization process.
+A few fundamental concepts in OAuth are discussed in this section - this would help us in mapping different actors involved in the authorization process.
 
 1. Resource Owner : Owner of the Resource (Data of this person/resource is shared with third party). eg: Person with a Google Account.
 2. Client: One who wants access on behalf of RO. e.g: StackOverflow
@@ -25,7 +25,7 @@ Terminologies:
 
 Same actor can play multiple roles based on the situation.
 
--> Authorization Grant Types (Flows) are as listed below:
+Authorization Grant Types (Flows) are as listed below:
 
 | Grant Type                                           | Use Case                                                 |
 | ---------------------------------------------------- | -------------------------------------------------------- |
@@ -35,11 +35,11 @@ Same actor can play multiple roles based on the situation.
 | Resource Owner Password Credentials (deprecated) | Username/password directly given to client (discouraged) |
 | Device Code                                      | Devices without browsers (TVs, consoles)                 |
 
--> Two types of tokens are :
+Two types of tokens are :
 1. Access Token
 2. Refresh Token
 
--> Different endpoints are:
+Different endpoints are:
 1. /authorize – where the user grants access (for code flow)
 2. /token – where tokens are issued
 3. /revoke – (optional) to revoke tokens
@@ -116,7 +116,7 @@ Create a SpringBoot project from [spring](https://start.spring.io/). Add Spring 
 
 Alternatively, add the following dependencies to SpringBoot web project.
 ```
-        <dependency>
+    <dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-oauth2-client</artifactId>
 		</dependency>
@@ -381,7 +381,137 @@ To test our changes, we can add another endpoint that follows a different patter
 
 For more Expression-Based Access Control, check Spring docs - https://docs.spring.io/spring-security/reference/6.0/servlet/authorization/expression-based.html.
 
+**Use Case 5**
 
+This use case is significantly different from the previous ones due to the following reasons:
+
+1. Protocols we discussed earlier (OAuth, OIDC etc.) are application-layer protocols that work on top of HTTP. Since we are exploring TCP level security mechanisms, none of the previously discussed protocols can be applied here.
+
+2. Security Mechanisms on HTTP requests are applied per request but TCP layer auth works per connection.
+
+3. TCP level simple authentication alone cannot be relied upon in a zero-trust authentication scenario. But there are alternatives to be considered if the zero-trust apps breathe in a secured environment.
+
+So then why are we exploring this option if it has too many drawbacks?
+
+1. TCP layer communication avoids HTTP overhead like headers, serialization, and session setup, leading to faster and lighter communication.
+
+2. TCP based communication is suitable for faster communication if all the services involved are deployed behind a secured perimeter(same K8s cluster). Think of a scenario where both the client and server are in our control and have no exposed public endpoints/access.
+
+*Case 1: TCP vs HTTP call that responds with a String*
+
+Consider a simple GET API without any Security Headers that sends back a String in response:
+
+```
+    @GetMapping("/hello")
+    public String hello() {   
+        return "hello";
+    }
+```
+We make a call to this API from postman client,
+![Scope Screen](images/scope-screen.png)
+
+Time taken for the entire transaction is : **183 ms**
+
+Next, let's try to make a TCP call from server to client in a SpringBoot Application - 
+
+We will pass a simple String from Client, Server will validate and respond back to the client.
+
+Client Code::
+
+```
+@Component
+public class TcpClient {
+    private final String SECRET = "mySecretToken";
+
+    @PostConstruct
+    public void startClient() {
+        new Thread(() -> {
+            try (Socket socket = new Socket("localhost", 9999)) {
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                Instant start = Instant.now();
+                out.write(SECRET + "\n");
+                out.flush();
+                String response = in.readLine();
+                Duration timeElapsed = Duration.between(start, Instant.now());
+                System.out.println("Server Response: " + response + " in "+ timeElapsed.toMillis() + "ms");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+}
+```
+
+Server Code::
+```
+@Component
+public class TCPServer {
+    private final String SECRET = "mySecretToken";
+
+    @PostConstruct
+    public void startServer() {
+        new Thread(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(9999)) {
+                while (true) {
+                    Socket socket = serverSocket.accept();
+                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                    BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+
+                    String received = in.readLine();
+                    if (SECRET.equals(received)) {
+                        out.write("AUTH_OK\n");
+                        out.flush();
+                    } else {
+                        out.write("AUTH_FAILED\n");
+                        out.flush();
+                        socket.close();
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+}
+```
+
+Response is -> Server Response: AUTH_OK in **2ms**
+
+Note that, this is not an apple to apple comparison between TCP and HTTP. This is one of the easiest way to compare the response time between two protocols but we need to keep in mind that TCP call stayed in-process (Both client and server were in same JVM) whereas HTTP call involved cross-process communication.
+
+*Case 2: Establishing Trust in TCP communications*
+
+TLS as we know is a cryptographic protocol that secures communication over the internet (or any computer network). To further establish trust between the client and server, we can enforce mTLS at the gateway level. 
+
+mTLS is an extension of TLS that stands for mutual TLS, i.e, instead of just server establishing its identity, even client will present its certificates for verification.
+
+Keeping in mind that microservices are typically deployed as containers today, especially in cloud-native environments, we would consider two scenarios :
+
+1. All related services are deployed in same pod 
+
+  There is little gain in adding security mechanisms for communication between services deployed in same pod. Containers in the same pod share the same network and filesystem namespace, they are already highly trusted and co-located.
+
+  In scenarios like these, its better to secure the APIs that are exposed to the outer world but keep the internal communications light and quick using TCP based communications or plain HTTP/gRPC over localhost(developing REST APIs are simpler than TCP based implementation).
+
+2. Services are deployed in muliple pod/nodes
+
+   As in any microservice architecture, basic TLS + OAuth2 + OIDC security established at gateway level acts as a strong defense mechanism.
+
+   Inter-service communications can be secured by:
+
+   1. Adding mTLS to ensure both client and server authenticate each other. This can achieved by using a service-mesh like Istio.
+   2. Adding network policies in K8S to add restrictions on pod communications.
+   3. Add connection logs for observability and logging.
+
+TCP based communications are not as popular as HTTP based ones. Primary reason for this is the ease to build and configure HTTP based communication systems for synchronous messaging.
+
+Systems that rely heavily on faster communication like Trading applications, Financial Applications etc., TCP based inter-service communication is more popular.
+
+To implement TCP communication between SpringBoot services, we can add Spring Integration as dependency.
+
+Spring Integration IP is a mature, enterprise grade option for adding internal TCP communication between services. It avoids the manual complexity of socket programming (As seen in Case 1).
 
 ## Code
 
@@ -393,3 +523,5 @@ https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/c
 
 1. Client Code : https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/client
 2. Server Code : https://github.com/r7b7/scalable-system-design/tree/spring-security-case-study/code/oauth/server
+
+**Use Case 5**

@@ -4,6 +4,6 @@ This repository contains in-depth design patterns, trade-offs, and best practice
 
 ## Get Started
 
-Start from the papers directory.
-
-Pick a topic of interest and open the .md file. Paper guides through the relevant code directory related to the topic / use case.
+1. Start from the papers directory.
+2. Pick a topic of interest and open the .md file.
+3. Navigate to the code directory as mentioned in the paper.

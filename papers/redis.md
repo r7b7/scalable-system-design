@@ -1,3 +1,6 @@
+# Caching in Spring Based Java Applications
+
+In this paper, we will walk through the best practices to keep in mind while implementing a caching system that is resilient, scalable and provides high performance.
 
 ## Part -1 : Can Your Caching Mechanism Auto-Recover?
 

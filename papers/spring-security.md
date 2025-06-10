@@ -149,7 +149,7 @@ Step 5:
 
 Hit the endpoint - http://localhost:8080
 
-![Output](images/google-redirect.png)
+![Output](/images/google-redirect.png)
 
 From this use case, let's try to understand the different actors involved in the OAuth process.
 

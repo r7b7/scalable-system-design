@@ -28,7 +28,7 @@ Redis Cluster is a way to distribute data across multiple Redis nodes(against a 
 
 For example, in a six node scenario, three nodes would become master nodes and three nodes would become replicas. These master and replica nodes are auto assigned by Redis cluster once we provide the network address of the standalone instances.  
 
-![Redis Cluster](images/redis-1.png)
+![Redis Cluster](../images/redis-1.png)
 
 Let’s say we have two services — Service A and Service B. In a multi node system, if Service A writes a key to Redis and Service B tries to get the key from the Redis, how will the request go to the same node? 
 
@@ -38,7 +38,7 @@ This is how it works internally:
 → Each master node is assigned a range of these slots 
 → The cluster automatically knows which node owns which slots 
 
-![Redis Cluster - Fetch Key](images/redis-2.png)
+![Redis Cluster - Fetch Key](../images/redis-2.png)
 
 We can verify this behavior using redis-cli. Let’s connect to one redis instance running at port 7000 ( assume we have 6 instances running on ports 7000 to 7005) 
 ```
@@ -71,7 +71,7 @@ Once the cluster is created, the output logs would show which instances are mast
 ```
 Master\[0\] -> Slots 0 - 5460 Master\[1\] -> Slots 5461 - 10922 Master\[2\] -> Slots 10923 - 16383 Adding replica 127.0.0.1:7004 to 127.0.0.1:7000 Adding replica 127.0.0.1:7005 to 127.0.0.1:7001 Adding replica 127.0.0.1:7003 to 127.0.0.1:7002 
 ```
-![Multiple Redis Nodes](images/redis-3.png)
+![Multiple Redis](../images/redis-3.png)
 
 ## Auto Recovery 
 In this section, let’s figure out what happens when one of the master nodes goes down. Let’s first check the cluster node info — CLUSTER NODES is the command to get cluster information. 

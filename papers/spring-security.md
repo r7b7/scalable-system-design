@@ -149,7 +149,7 @@ Step 5:
 
 Hit the endpoint - http://localhost:8080
 
-![Output](/images/google-redirect.png)
+![Output](../images/google-redirect.png)
 
 From this use case, let's try to understand the different actors involved in the OAuth process.
 
@@ -241,7 +241,7 @@ KeyCloak is an OAuth2, OIDC and SAML compliant server.
 > For instance, if we had to pick a flow where the client first retrieves the authorization code and passes it to resource server then we will pick the grant_type as "authorization_code".
 >
 > 1. Retrieve initial token from keycloak portal
-![Output](images/keycloak1.png)
+![Output](../images/keycloak1.png)
 >
 > 2. Register the client by making a POST API call. Use the initial token retrieved in Step 1 to set the header.
 ```
@@ -285,7 +285,7 @@ To enable this flow in KeyCloak, we would need to follow these steps:
 2. Create and register a client for our Client SpringBoot service. (demo_client in our example)
 
 Update Client Settings as shown in the image below,
-![Settings](images/client-setting.png)
+![Settings](../images/client-setting.png)
 
 3. Optionally, create and register another client for our ResourceServer SpringBoot App. This step is not needed for basic JWT authorization so you may as well skip this step for now.
 
@@ -302,7 +302,7 @@ SpringBoot app by default tries to fetch metadata from the "issuer-uri" endpoint
 All endpoints can be accessed using the link in settings section of keycloak. 
 
 Refer image below,
-![Endpoints](images/endpoint.png)
+![Endpoints](../images/endpoint.png)
 
 5. In server app, we would just need to provide the issuer-uri
 ```
@@ -319,10 +319,10 @@ spring:
 Note that, to have free access to client APIs, we bypass the security in config class.
 
 Using Postman or any similar tool, let's fetch the token from Client API
-![Client](images/client.png)
+![Client](../images/client.png)
 
 Pass it as a Bearer header token to the resource server API
-![Server](images/resource-server.png)
+![Server](../images/resource-server.png)
 
 Delete or tamper the Bearer token and we would find that the call fails with a 401.
 
@@ -335,7 +335,7 @@ In the previous use case, we created a client that was assigned a few default sc
 In this use case, we want to only allow API calls with a certain scope to access our resources. This way we can enforce scope level authorization on clients. This way we can also enforce access at a granular level by allowing specific clients to perform authorized actions like read, write etc.
 
 From our previous use case, we would borrow the client and add one additional scope to it. 
-![Scope Screen](images/scope-screen.png)
+![Scope Screen](../images/scope-screen.png)
 
 Now when we hit the client API, fetch the token generated, head to jwt.io to decode the token, we will notice that an additional "read:data" scope is added. (If we perform the same steps in Use Case 3, we would get this as a scope - "scope": "openid profile email")
 
@@ -399,7 +399,7 @@ Consider a simple GET API without any Security Headers that sends back a String 
     }
 ```
 We make a call to this API from postman client,
-![Scope Screen](images/scope-screen.png)
+![Scope Screen](../images/scope-screen.png)
 
 Time taken for the entire transaction is : **183 ms**
 
